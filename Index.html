@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SekolahPay - Pembayaran Siswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@500;600&amp;display=swap');
+        
+        :root {
+            --primary: #2563eb;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Poppins', system_ui, sans-serif;
+        }
+
+        .mobile-container {
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: #f8fafc;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+        }
+
+        .section-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .student-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .student-card:active {
+            transform: scale(0.98);
+        }
+
+        .bill-item {
+            transition: all 0.2s ease;
+        }
+
+        .modal {
+            animation: modalPop 0.3s ease forwards;
+        }
+
+        @keyframes modalPop {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .bottom-nav {
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .data-table {
+            font-size: 0.875rem;
+        }
+
+        .tagihan-unpaid {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .tagihan-paid {
+            border-left: 4px solid #22c55e;
+        }
+
+        .app-container {
+            padding-bottom: 70px;
+        }
+
+        .hero-bg {
+            background-size: cover;
+            background-position: center;
+        }
+
+        .nav-active {
+            color: #2563eb;
+            position: relative;
+        }
+        
+        .nav-active:after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: #2563eb;
+            border-radius: 9999px;
+        }
+
+        .custom-shadow {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+    <!-- Mobile Container -->
+    <div class="mobile-container mx-auto bg-white min-h-screen relative" id="app">
+        
+        <!-- Header -->
+        <div class="app-header px-5 pt-8 pb-6 sticky top-0 z-50">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight" id="header-appname">SekolahPay</h1>
+                <p class="text-blue-100 text-sm">Sistem Pembayaran Siswa</p>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="app-container pb-20" id="content-area">
+            
+            <!-- ==================== BERANDA ==================== -->
+            <div id="page-beranda">
+                <div class="px-5 pt-6">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-1">Selamat Datang</h2>
+                    <p class="text-slate-500 text-sm">Sistem pembayaran sekolah yang mudah &amp; transparan</p>
+                </div>
+
+                <!-- 3 Hero Sections -->
+                <div class="px-5 mt-6 space-y-4" id="beranda-sections">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- ==================== PEMBAYARAN ==================== -->
+            <div id="page-pembayaran" class="hidden px-5 pt-6">
+                <div class="mb-5">
+                    <h2 class="text-xl font-semibold text-slate-800">Pembayaran Siswa</h2>
+                    <p class="text-sm text-slate-500">Cari nama siswa untuk melihat tagihan</p>
+                </div>
+
+                <!-- Search -->
+                <div class="relative mb-5">
+                    <div class="absolute left-4 top-3.5 text-slate-400">
+                        <i class="fa-solid fa-search"></i>
+                    </div>
+                    <input type="text" id="search-input" 
+                           class="w-full bg-white border border-slate-200 focus:border-blue-500 transition-colors pl-11 pr-4 py-3.5 rounded-3xl text-sm placeholder:text-slate-400"
+                           placeholder="Cari nama siswa... (contoh: Ahmad)"
+                           onkeyup="searchStudents()">
+                </div>
+
+                <!-- Search Results -->
+                <div id="search-results" class="space-y-3">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Notification -->
+                <div class="mt-6 bg-blue-50 border border-blue-100 rounded-3xl p-4 text-sm">
+                    <div class="flex gap-x-3">
+                        <div class="text-blue-500 mt-0.5">
+                            <i class="fa-solid fa-info-circle"></i>
+                        </div>
+                        <div class="text-blue-700 text-xs leading-relaxed">
+                            <span class="font-semibold">Pemberitahuan:</span> 
+                            <span id="payment-notification">Pembayaran SPP bulan Januari sudah dibuka. Segera lakukan pembayaran sebelum tanggal 10.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TENTANG ==================== -->
+            <div id="page-tentang" class="hidden px-5 pt-6">
+                <div class="text-center py-8" id="tentang-content">
+                    <!-- Dynamic content from aboutSettings -->
+                </div>
+            </div>
+
+            <!-- ==================== LOGIN ==================== -->
+            <div id="page-login" class="hidden px-5 pt-8">
+                <div class="max-w-xs mx-auto">
+                    <div class="text-center mb-8">
+                        <div class="mx-auto w-16 h-16 bg-blue-600 rounded-3xl flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-lock text-white text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold">Masuk Admin</h2>
+                        <p class="text-sm text-slate-500 mt-1">Hanya untuk petugas sekolah</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1.5">Username</label>
+                            <input type="text" id="login-username" value="superadmin"
+                                   class="w-full px-4 py-3.5 border border-slate-200 rounded-3xl text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium text-slate-600 block mb-1.5">Password</label>
+                            <input type="password" id="login-password" value="adminsuper"
+                                   class="w-full px-4 py-3.5 border border-slate-200 rounded-3xl text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        
+                        <button onclick="login()" 
+                                class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition-colors text-white font-semibold py-4 rounded-3xl mt-2 flex items-center justify-center gap-x-2">
+                            <i class="fa-solid fa-sign-in-alt"></i>
+                            <span>Masuk</span>
+                        </button>
+                    </div>
+                    
+                    <div class="text-center mt-6">
+                        <p class="text-xs text-slate-400">Demo: username <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded">superadmin</span> • password <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded">adminsuper</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== ADMIN DASHBOARD ==================== -->
+            <div id="page-admin" class="hidden">
+                <div class="px-5 pt-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="font-semibold text-xl">Dashboard Admin</h2>
+                            <p class="text-xs text-emerald-600 flex items-center gap-x-1">
+                                <i class="fa-solid fa-circle text-[8px]"></i> 
+                                <span>Super Admin</span>
+                            </p>
+                        </div>
+                        
+                        <!-- User Info + Logout (hanya muncul di halaman Admin) -->
+                        <div class="flex items-center gap-x-2">
+                            <div class="flex items-center gap-x-2 bg-emerald-100 text-emerald-700 px-3 py-1 rounded-2xl text-xs font-medium">
+                                <i class="fa-solid fa-user"></i>
+                                <span id="admin-username-display"></span>
+                            </div>
+                            <button onclick="logout()" 
+                                    class="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-medium rounded-2xl flex items-center gap-x-1">
+                                <i class="fa-solid fa-sign-out-alt"></i>
+                                <span>Keluar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Admin Menu Grid -->
+                    <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div onclick="showAdminTab('rekap')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-chart-line text-blue-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Rekap Keuangan</div>
+                            <div class="text-xs text-slate-500">Harian / Bulanan</div>
+                        </div>
+                        <div onclick="showAdminTab('ekspor')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-file-export text-emerald-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Ekspor Rekap</div>
+                            <div class="text-xs text-slate-500">Download Excel</div>
+                        </div>
+                        <div onclick="showAdminTab('input-siswa')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-user-plus text-violet-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Input Siswa</div>
+                            <div class="text-xs text-slate-500">Tambah &amp; Kelola</div>
+                        </div>
+                        <div onclick="showAdminTab('input-tagihan')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-file-invoice-dollar text-amber-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Input Tagihan</div>
+                            <div class="text-xs text-slate-500">Buat tagihan baru</div>
+                        </div>
+                        <div onclick="showAdminTab('pengaturan')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-cog text-slate-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Pengaturan</div>
+                            <div class="text-xs text-slate-500">Home &amp; QRIS</div>
+                        </div>
+                        <div onclick="showAdminTab('akun')" class="bg-white border hover:border-blue-200 transition-colors p-4 rounded-3xl cursor-pointer">
+                            <i class="fa-solid fa-users text-rose-600 text-xl mb-3"></i>
+                            <div class="font-semibold text-sm">Daftar Akun</div>
+                            <div class="text-xs text-slate-500">Kelola pengguna</div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Admin Content -->
+                    <div id="admin-content">
+                        <!-- Content loaded by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="fixed bottom-0 left-0 right-0 max-w-[420px] mx-auto bg-white border-t z-50">
+            <div class="grid grid-cols-5 text-xs">
+                <div onclick="showPage('beranda')" class="nav-item flex flex-col items-center py-3 text-slate-500 cursor-pointer" id="nav-beranda">
+                    <i class="fa-solid fa-home text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium">Beranda</span>
+                </div>
+                <div onclick="showPage('pembayaran')" class="nav-item flex flex-col items-center py-3 text-slate-500 cursor-pointer" id="nav-pembayaran">
+                    <i class="fa-solid fa-credit-card text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium">Pembayaran</span>
+                </div>
+                <div onclick="showPage('tentang')" class="nav-item flex flex-col items-center py-3 text-slate-500 cursor-pointer" id="nav-tentang">
+                    <i class="fa-solid fa-info-circle text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium">Tentang</span>
+                </div>
+                <div onclick="showLoginOrAdmin()" class="nav-item flex flex-col items-center py-3 text-slate-500 cursor-pointer" id="nav-login">
+                    <i class="fa-solid fa-user-shield text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium" id="nav-login-text">Login</span>
+                </div>
+                <div onclick="showPage('admin')" id="nav-admin" class="hidden nav-item flex flex-col items-center py-3 text-slate-500 cursor-pointer">
+                    <i class="fa-solid fa-tachometer-alt text-lg mb-0.5"></i>
+                    <span class="text-[10px] font-medium">Admin</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Student Detail Modal -->
+    <div id="student-modal" onclick="if (event.target.id === 'student-modal') closeStudentModal()" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-end">
+        <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-[420px] mx-auto rounded-t-3xl max-h-[92vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-5 pt-5 pb-3 flex items-center justify-between border-b">
+                <div class="font-semibold text-lg">Detail Siswa</div>
+                <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 w-9 h-9 flex items-center justify-center">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="overflow-auto max-h-[calc(92vh-60px)]" id="student-modal-content">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Confirmation Modal -->
+    <div id="payment-modal" onclick="if (event.target.id === 'payment-modal') closePaymentModal()" class="hidden fixed inset-0 bg-black/60 z-[110] flex items-end">
+        <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-[420px] mx-auto rounded-t-3xl p-5">
+            <div class="text-center">
+                <div class="mx-auto w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-qrcode text-amber-600 text-3xl"></i>
+                </div>
+                <h3 class="font-bold text-xl">Konfirmasi Pembayaran</h3>
+                <p class="text-sm text-slate-500 mt-1">Anda akan membayar tagihan yang dipilih</p>
+            </div>
+
+            <div class="my-5 bg-slate-50 rounded-2xl p-4 text-sm">
+                <div class="flex justify-between mb-1">
+                    <span class="text-slate-600">Total Tagihan</span>
+                    <span id="payment-total" class="font-bold text-lg text-emerald-600"></span>
+                </div>
+                <div id="payment-items" class="text-xs text-slate-500 mt-2 space-y-0.5"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closePaymentModal()" 
+                        class="py-3.5 rounded-3xl border font-medium text-sm">Batal</button>
+                <button onclick="processPayment()" 
+                        class="py-3.5 rounded-3xl bg-emerald-600 text-white font-semibold text-sm flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Ya, Bayar Sekarang</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Payment Modal -->
+    <div id="qris-modal" onclick="if (event.target.id === 'qris-modal') closeQRISModal()" class="hidden fixed inset-0 bg-black/70 z-[120] flex items-end">
+        <div onclick="event.stopImmediatePropagation()" class="bg-white w-full max-w-[420px] mx-auto rounded-t-3xl p-5">
+            <div class="text-center mb-4">
+                <h3 class="font-bold">Pembayaran via QRIS</h3>
+                <p class="text-xs text-slate-500">Scan QR code di bawah ini</p>
+            </div>
+            
+            <div class="flex justify-center my-4">
+                <div id="qris-container" class="p-4 bg-white border rounded-2xl"></div>
+            </div>
+            
+            <div class="text-center text-xs text-slate-500 mb-4">
+                Total: <span id="qris-total" class="font-bold text-emerald-600"></span>
+            </div>
+
+            <button onclick="simulatePaymentSuccess()" 
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-3xl flex items-center justify-center gap-x-2">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>Saya Sudah Melakukan Pembayaran</span>
+            </button>
+            
+            <button onclick="closeQRISModal()" class="w-full text-center text-sm text-slate-500 mt-3 py-2">Batalkan</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== TAILWIND CONFIG ====================
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#2563eb');
+        }
+
+        // ==================== DATA STORAGE ====================
+        let students = [];
+        let bills = [];
+        let homeSections = [];
+        let qrisApiKey = "https://api.qris.example.com/pay?key=DEMO123456789";
+        let accounts = [
+            { username: "superadmin", password: "adminsuper", role: "superadmin" }
+        ];
+        let currentUser = null;
+        let currentStudentId = null;
+        let selectedBillsForPayment = [];
+
+        // App Settings (Nama Aplikasi, Warna, dll)
+        let appSettings = {
+            appName: "SekolahPay",
+            primaryColor: "#2563eb"
+        };
+
+        // About Page Settings (fully customizable)
+        let aboutSettings = {
+            title: "Tentang SekolahPay",
+            description: "Aplikasi pembayaran sekolah digital yang memudahkan orang tua dan admin sekolah dalam mengelola tagihan siswa secara transparan dan efisien.",
+            stats: {
+                siswa: "1.2k",
+                pelunasan: "98%",
+                akses: "24/7"
+            }
+        };
+
+        // ==================== INITIAL DATA ====================
+        function initData() {
+            // Load from localStorage or create initial data
+            const savedStudents = localStorage.getItem('sekolahpay_students');
+            const savedBills = localStorage.getItem('sekolahpay_bills');
+            const savedHome = localStorage.getItem('sekolahpay_home');
+            const savedQRIS = localStorage.getItem('sekolahpay_qris');
+            const savedAccounts = localStorage.getItem('sekolahpay_accounts');
+            const savedAppSettings = localStorage.getItem('sekolahpay_app_settings');
+
+            if (savedStudents) {
+                students = JSON.parse(savedStudents);
+            } else {
+                // Sample students
+                students = [
+                    { id: 1, nama: "Ahmad Fauzi", gender: "Laki-laki", alamat: "Jl. Merdeka No. 45, Bandung", kelas: "7A", foto: "https://i.pravatar.cc/150?img=12" },
+                    { id: 2, nama: "Siti Nurhaliza", gender: "Perempuan", alamat: "Jl. Sudirman No. 12, Cimahi", kelas: "8B", foto: "https://i.pravatar.cc/150?img=28" },
+                    { id: 3, nama: "Budi Santoso", gender: "Laki-laki", alamat: "Jl. Braga No. 88, Bandung", kelas: "7A", foto: "https://i.pravatar.cc/150?img=15" },
+                    { id: 4, nama: "Rina Marlina", gender: "Perempuan", alamat: "Jl. Asia Afrika No. 5, Bandung", kelas: "9C", foto: "https://i.pravatar.cc/150?img=32" },
+                    { id: 5, nama: "Andi Wijaya", gender: "Laki-laki", alamat: "Jl. Cihampelas No. 20, Bandung", kelas: "8B", foto: "https://i.pravatar.cc/150?img=20" }
+                ];
+                localStorage.setItem('sekolahpay_students', JSON.stringify(students));
+            }
+
+            if (savedBills) {
+                bills = JSON.parse(savedBills);
+            } else {
+                const currentMonth = new Date().getMonth() + 1;
+                const currentYear = new Date().getFullYear();
+                
+                bills = [
+                    { id: 101, studentId: 1, keterangan: "SPP Januari 2026", nominal: 450000, bulan: 1, tahun: 2026, status: "belum", paidAt: null },
+                    { id: 102, studentId: 1, keterangan: "Uang Kegiatan Semester Genap", nominal: 150000, bulan: 1, tahun: 2026, status: "lunas", paidAt: "2026-01-05 09:12:33" },
+                    { id: 103, studentId: 2, keterangan: "SPP Januari 2026", nominal: 450000, bulan: 1, tahun: 2026, status: "belum", paidAt: null },
+                    { id: 104, studentId: 3, keterangan: "SPP Januari 2026", nominal: 450000, bulan: 1, tahun: 2026, status: "lunas", paidAt: "2026-01-03 14:45:10" },
+                    { id: 105, studentId: 4, keterangan: "SPP Januari 2026", nominal: 450000, bulan: 1, tahun: 2026, status: "belum", paidAt: null },
+                    { id: 106, studentId: 5, keterangan: "SPP Januari 2026", nominal: 450000, bulan: 1, tahun: 2026, status: "lunas", paidAt: "2026-01-07 11:20:55" }
+                ];
+                localStorage.setItem('sekolahpay_bills', JSON.stringify(bills));
+            }
+
+            if (savedHome) {
+                homeSections = JSON.parse(savedHome);
+            } else {
+                homeSections = [
+                    {
+                        title: "Pembayaran SPP Bulanan",
+                        description: "Bayar SPP dengan mudah dan cepat. Dapatkan notifikasi tepat waktu agar tidak ketinggalan.",
+                        bgImage: "https://picsum.photos/id/1015/800/600"
+                    },
+                    {
+                        title: "Riwayat Transaksi Aman",
+                        description: "Semua riwayat pembayaran tersimpan rapi dan bisa diakses kapan saja oleh orang tua.",
+                        bgImage: "https://picsum.photos/id/106/800/600"
+                    },
+                    {
+                        title: "Laporan Keuangan Transparan",
+                        description: "Admin dapat melihat rekap lengkap dan mengekspor data untuk keperluan sekolah.",
+                        bgImage: "https://picsum.photos/id/201/800/600"
+                    }
+                ];
+                localStorage.setItem('sekolahpay_home', JSON.stringify(homeSections));
+            }
+
+            if (savedQRIS) qrisApiKey = savedQRIS;
+            if (savedAccounts) accounts = JSON.parse(savedAccounts);
+
+            if (savedAppSettings) {
+                appSettings = JSON.parse(savedAppSettings);
+            }
+
+            const savedAbout = localStorage.getItem('sekolahpay_about');
+            if (savedAbout) {
+                aboutSettings = JSON.parse(savedAbout);
+            }
+
+            // Apply app settings on load
+            applyAppSettings();
+
+            // Update notification text
+            const notifEl = document.getElementById('payment-notification');
+            if (notifEl) {
+                notifEl.textContent = "Pembayaran SPP bulan Januari 2026 sudah dibuka. Segera lakukan pembayaran sebelum tanggal 10 Februari.";
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('sekolahpay_students', JSON.stringify(students));
+            localStorage.setItem('sekolahpay_bills', JSON.stringify(bills));
+            localStorage.setItem('sekolahpay_home', JSON.stringify(homeSections));
+            localStorage.setItem('sekolahpay_qris', qrisApiKey);
+            localStorage.setItem('sekolahpay_accounts', JSON.stringify(accounts));
+            localStorage.setItem('sekolahpay_app_settings', JSON.stringify(appSettings));
+            localStorage.setItem('sekolahpay_about', JSON.stringify(aboutSettings));
+        }
+
+        function applyAppSettings() {
+            // Update app name in header
+            const headerTitle = document.getElementById('header-appname');
+            if (headerTitle) headerTitle.textContent = appSettings.appName;
+
+            // Update document title
+            document.title = `${appSettings.appName} - Pembayaran Siswa`;
+
+            // Update primary color (for future enhancements)
+            document.documentElement.style.setProperty('--primary', appSettings.primaryColor);
+            
+            // Update some key accent colors dynamically
+            const style = document.createElement('style');
+            style.id = 'dynamic-theme';
+            style.innerHTML = `
+                .app-header { background: linear-gradient(135deg, ${appSettings.primaryColor}, #3b82f6) !important; }
+                .text-blue-600, .text-blue-700 { color: ${appSettings.primaryColor} !important; }
+                .bg-blue-600, .bg-blue-700 { background-color: ${appSettings.primaryColor} !important; }
+                .border-blue-500 { border-color: ${appSettings.primaryColor} !important; }
+            `;
+            const oldStyle = document.getElementById('dynamic-theme');
+            if (oldStyle) oldStyle.remove();
+            document.head.appendChild(style);
+        }
+
+        function renderTentangPage() {
+            const container = document.getElementById('tentang-content');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="mx-auto w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mb-5">
+                    <i class="fa-solid fa-school text-blue-600 text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">${aboutSettings.title}</h2>
+                <p class="mt-3 text-slate-600 max-w-xs mx-auto text-sm leading-relaxed">
+                    ${aboutSettings.description}
+                </p>
+                
+                <div class="mt-8 grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border">
+                        <div class="text-2xl font-bold text-blue-600">${aboutSettings.stats.siswa}</div>
+                        <div class="text-xs text-slate-500 mt-1">Siswa Terdaftar</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border">
+                        <div class="text-2xl font-bold text-emerald-600">${aboutSettings.stats.pelunasan}</div>
+                        <div class="text-xs text-slate-500 mt-1">Tingkat Pelunasan</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border">
+                        <div class="text-2xl font-bold text-amber-600">${aboutSettings.stats.akses}</div>
+                        <div class="text-xs text-slate-500 mt-1">Akses Online</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== NAVIGATION ====================
+        function showPage(page) {
+            // Hide all pages
+            document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('hidden'));
+            
+            // Show selected page
+            const target = document.getElementById('page-' + page);
+            if (target) target.classList.remove('hidden');
+
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'text-blue-600'));
+            const navEl = document.getElementById('nav-' + page);
+            if (navEl) navEl.classList.add('active', 'text-blue-600');
+
+            // Special actions
+            if (page === 'beranda') {
+                renderBeranda();
+            }
+            if (page === 'tentang') {
+                renderTentangPage();
+            }
+            if (page === 'pembayaran') {
+                document.getElementById('search-results').innerHTML = '';
+                document.getElementById('search-input').value = '';
+            }
+            if (page === 'admin' && currentUser) {
+                showAdminTab('rekap');
+            }
+        }
+
+        function showLoginOrAdmin() {
+            if (currentUser) {
+                showPage('admin');
+            } else {
+                showPage('login');
+            }
+        }
+
+        function updateNavForUser() {
+            const navAdmin = document.getElementById('nav-admin');
+            const navLogin = document.getElementById('nav-login');
+            const navLoginText = document.getElementById('nav-login-text');
+
+            if (currentUser) {
+                navAdmin.classList.remove('hidden');
+                navLogin.classList.add('hidden');
+                navLoginText.textContent = 'Admin';
+                
+                // Set username in Admin page header
+                const adminUsernameEl = document.getElementById('admin-username-display');
+                if (adminUsernameEl) adminUsernameEl.textContent = currentUser.username;
+            } else {
+                navAdmin.classList.add('hidden');
+                navLogin.classList.remove('hidden');
+                navLoginText.textContent = 'Login';
+            }
+        }
+
+        function login() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            const user = accounts.find(a => a.username === username && a.password === password);
+            
+            if (user) {
+                currentUser = user;
+                updateNavForUser();
+                showPage('admin');
+                showAdminTab('rekap');
+                
+                // Success toast
+                showToast(`Selamat datang, ${username}!`, 'success');
+            } else {
+                showToast('Username atau password salah!', 'error');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            updateNavForUser();
+            showPage('beranda');
+            showToast('Anda telah keluar dari akun admin.', 'info');
+        }
+
+        // ==================== BERANDA ====================
+        function renderBeranda() {
+            const container = document.getElementById('beranda-sections');
+            container.innerHTML = '';
+
+            homeSections.forEach((section, index) => {
+                const card = document.createElement('div');
+                card.className = `section-card rounded-3xl overflow-hidden shadow-sm border border-slate-100 h-52 relative`;
+                card.innerHTML = `
+                    <div class="hero-bg absolute inset-0" style="background-image: url('${section.bgImage}')"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/70"></div>
+                    
+                    <div class="relative z-10 p-5 h-full flex flex-col justify-end text-white">
+                        <div>
+                            <h3 class="font-bold text-xl leading-tight">${section.title}</h3>
+                            <p class="mt-2 text-sm text-white/90 line-clamp-3">${section.description}</p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==================== PEMBAYARAN - SEARCH ====================
+        function searchStudents() {
+            const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+
+            if (!keyword) return;
+
+            const filtered = students.filter(s => 
+                s.nama.toLowerCase().includes(keyword) ||
+                s.kelas.toLowerCase().includes(keyword)
+            );
+
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-8 text-sm text-slate-400">
+                        <i class="fa-solid fa-search text-3xl mb-3 block"></i>
+                        Tidak ada siswa yang cocok dengan pencarian.
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(student => {
+                const unpaidCount = bills.filter(b => b.studentId === student.id && b.status === 'belum').length;
+                const totalUnpaid = bills
+                    .filter(b => b.studentId === student.id && b.status === 'belum')
+                    .reduce((sum, b) => sum + b.nominal, 0);
+
+                const div = document.createElement('div');
+                div.className = `student-card bg-white border border-slate-200 hover:border-blue-300 active:bg-slate-50 rounded-3xl p-4 flex gap-x-4 cursor-pointer`;
+                div.innerHTML = `
+                    <img src="${student.foto}" class="w-14 h-14 rounded-2xl object-cover border" alt="${student.nama}">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold text-slate-800">${student.nama}</div>
+                        <div class="text-xs text-slate-500">${student.kelas} • ${student.gender}</div>
+                        
+                        <div class="mt-2 flex items-center gap-x-2">
+                            ${unpaidCount > 0 ? `
+                                <div class="inline-flex items-center text-xs bg-red-100 text-red-600 px-3 py-0.5 rounded-2xl font-medium">
+                                    <i class="fa-solid fa-exclamation-circle mr-1"></i> 
+                                    ${unpaidCount} tagihan belum lunas
+                                </div>
+                            ` : `
+                                <div class="inline-flex items-center text-xs bg-emerald-100 text-emerald-600 px-3 py-0.5 rounded-2xl font-medium">
+                                    <i class="fa-solid fa-check-circle mr-1"></i> 
+                                    Lunas
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        ${unpaidCount > 0 ? `
+                            <div class="text-xs text-red-500">Rp ${totalUnpaid.toLocaleString('id-ID')}</div>
+                        ` : ''}
+                        <i class="fa-solid fa-chevron-right text-slate-300 mt-5"></i>
+                    </div>
+                `;
+                
+                div.onclick = () => showStudentDetail(student.id);
+                resultsContainer.appendChild(div);
+            });
+        }
+
+        // ==================== STUDENT DETAIL ====================
+        function showStudentDetail(studentId) {
+            currentStudentId = studentId;
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const modal = document.getElementById('student-modal');
+            const content = document.getElementById('student-modal-content');
+
+            const studentBills = bills.filter(b => b.studentId === studentId);
+            const unpaidBills = studentBills.filter(b => b.status === 'belum');
+            const paidBills = studentBills.filter(b => b.status === 'lunas');
+
+            let html = `
+                <div class="px-5 pt-5">
+                    <!-- Student Info -->
+                    <div class="flex gap-x-4 items-start">
+                        <img src="${student.foto}" class="w-20 h-20 rounded-3xl object-cover border-2 border-white shadow" alt="">
+                        <div class="flex-1">
+                            <div class="font-bold text-2xl text-slate-800">${student.nama}</div>
+                            <div class="text-sm text-slate-500">${student.kelas} • ${student.gender}</div>
+                            <div class="text-xs mt-1 text-slate-400">${student.alamat}</div>
+                        </div>
+                    </div>
+
+                    <!-- Unpaid Bills -->
+                    <div class="mt-7">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="font-semibold text-red-600 flex items-center gap-x-2">
+                                <i class="fa-solid fa-file-invoice"></i> 
+                                <span>Tagihan Belum Dibayar</span>
+                            </div>
+                            <div class="text-xs px-3 py-1 bg-red-100 text-red-600 rounded-2xl font-medium">${unpaidBills.length} tagihan</div>
+                        </div>
+            `;
+
+            if (unpaidBills.length > 0) {
+                html += `<div class="space-y-2 mb-4" id="unpaid-list">`;
+                unpaidBills.forEach(bill => {
+                    html += `
+                        <label class="bill-item flex items-center gap-x-3 bg-white border border-red-100 p-3 rounded-2xl cursor-pointer">
+                            <input type="checkbox" class="w-5 h-5 accent-red-500" value="${bill.id}" onchange="updateSelectedBills()">
+                            <div class="flex-1">
+                                <div class="font-medium text-sm">${bill.keterangan}</div>
+                                <div class="text-red-600 font-semibold">Rp ${bill.nominal.toLocaleString('id-ID')}</div>
+                            </div>
+                        </label>
+                    `;
+                });
+                html += `</div>
+                    <div class="flex items-center justify-between bg-red-50 px-4 py-3 rounded-2xl mb-2">
+                        <div class="font-medium text-sm">Total yang akan dibayar</div>
+                        <div id="selected-total" class="font-bold text-red-600 text-lg">Rp 0</div>
+                    </div>
+                    <button onclick="showPaymentConfirmation()" 
+                            class="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 transition-colors text-white font-semibold py-3.5 rounded-3xl flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-credit-card"></i>
+                        <span>Bayar Tagihan Terpilih</span>
+                    </button>`;
+            } else {
+                html += `<div class="bg-emerald-50 text-emerald-600 text-sm p-4 rounded-2xl">Semua tagihan sudah lunas. Terima kasih!</div>`;
+            }
+
+            // Paid History
+            html += `
+                    </div>
+                    
+                    <div class="mt-8">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="font-semibold text-emerald-600 flex items-center gap-x-2">
+                                <i class="fa-solid fa-history"></i> 
+                                <span>Riwayat Pembayaran</span>
+                            </div>
+                            <div class="text-xs px-3 py-1 bg-emerald-100 text-emerald-600 rounded-2xl font-medium">${paidBills.length} transaksi</div>
+                        </div>
+            `;
+
+            if (paidBills.length > 0) {
+                html += `<div class="space-y-2">`;
+                paidBills.sort((a, b) => new Date(b.paidAt) - new Date(a.paidAt)).forEach(bill => {
+                    html += `
+                        <div class="flex justify-between items-center bg-white border p-3 rounded-2xl">
+                            <div>
+                                <div class="font-medium text-sm">${bill.keterangan}</div>
+                                <div class="text-[10px] text-emerald-500">${bill.paidAt}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-semibold text-emerald-600">Rp ${bill.nominal.toLocaleString('id-ID')}</div>
+                                <div class="text-[10px] text-emerald-500">LUNAS</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            } else {
+                html += `<div class="text-xs text-slate-400">Belum ada riwayat pembayaran.</div>`;
+            }
+
+            html += `</div></div>`;
+
+            content.innerHTML = html;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeStudentModal() {
+            const modal = document.getElementById('student-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            selectedBillsForPayment = [];
+        }
+
+        function updateSelectedBills() {
+            const checkboxes = document.querySelectorAll('#unpaid-list input[type="checkbox"]:checked');
+            selectedBillsForPayment = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            const total = bills
+                .filter(b => selectedBillsForPayment.includes(b.id))
+                .reduce((sum, b) => sum + b.nominal, 0);
+            
+            const totalEl = document.getElementById('selected-total');
+            if (totalEl) {
+                totalEl.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+            }
+        }
+
+        function showPaymentConfirmation() {
+            if (selectedBillsForPayment.length === 0) {
+                showToast('Pilih minimal satu tagihan!', 'error');
+                return;
+            }
+
+            const modal = document.getElementById('payment-modal');
+            const totalEl = document.getElementById('payment-total');
+            const itemsEl = document.getElementById('payment-items');
+
+            const selectedBills = bills.filter(b => selectedBillsForPayment.includes(b.id));
+            const total = selectedBills.reduce((sum, b) => sum + b.nominal, 0);
+
+            totalEl.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+            
+            itemsEl.innerHTML = selectedBills.map(b => 
+                `<div class="flex justify-between"><span>${b.keterangan}</span> <span class="font-medium">Rp ${b.nominal.toLocaleString('id-ID')}</span></div>`
+            ).join('');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePaymentModal() {
+            const modal = document.getElementById('payment-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function processPayment() {
+            closePaymentModal();
+            
+            const selectedBills = bills.filter(b => selectedBillsForPayment.includes(b.id));
+            const total = selectedBills.reduce((sum, b) => sum + b.nominal, 0);
+
+            // Show QRIS Modal
+            const qrisModal = document.getElementById('qris-modal');
+            const qrisContainer = document.getElementById('qris-container');
+            const qrisTotal = document.getElementById('qris-total');
+
+            qrisTotal.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+            qrisContainer.innerHTML = '';
+
+            // Generate QR Code
+            new QRCode(qrisContainer, {
+                text: `${qrisApiKey}&amount=${total}&ref=${Date.now()}`,
+                width: 180,
+                height: 180,
+                colorDark: "#111827",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            qrisModal.classList.remove('hidden');
+            qrisModal.classList.add('flex');
+        }
+
+        function closeQRISModal() {
+            const modal = document.getElementById('qris-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function simulatePaymentSuccess() {
+            const modal = document.getElementById('qris-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+
+            if (!currentStudentId || selectedBillsForPayment.length === 0) return;
+
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, 19).replace('T', ' ');
+
+            // Update bills to paid
+            bills.forEach(bill => {
+                if (selectedBillsForPayment.includes(bill.id)) {
+                    bill.status = 'lunas';
+                    bill.paidAt = timestamp;
+                }
+            });
+
+            saveData();
+
+            showToast('Pembayaran berhasil! Tagihan telah lunas.', 'success');
+
+            // Refresh student detail
+            setTimeout(() => {
+                closeStudentModal();
+                showStudentDetail(currentStudentId);
+                // Also refresh search if user is on payment page
+                const searchInput = document.getElementById('search-input');
+                if (searchInput && searchInput.value) {
+                    searchStudents();
+                }
+            }, 800);
+        }
+
+        // ==================== ADMIN FEATURES ====================
+        function showAdminTab(tab) {
+            const container = document.getElementById('admin-content');
+            container.innerHTML = '';
+
+            if (tab === 'rekap') {
+                renderRekapKeuangan(container);
+            } else if (tab === 'ekspor') {
+                renderEksporRekap(container);
+            } else if (tab === 'input-siswa') {
+                renderInputSiswa(container);
+            } else if (tab === 'input-tagihan') {
+                renderInputTagihan(container);
+            } else if (tab === 'pengaturan') {
+                renderPengaturan(container);
+            } else if (tab === 'akun') {
+                renderDaftarAkun(container);
+            }
+        }
+
+        function renderRekapKeuangan(container) {
+            container.innerHTML = `
+                <div class="bg-white rounded-3xl border p-5">
+                    <h3 class="font-semibold mb-4">Rekap Keuangan</h3>
+                    
+                    <div class="flex gap-2 mb-5">
+                        <button onclick="filterRekap('harian')" class="px-4 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-2xl font-medium">Harian</button>
+                        <button onclick="filterRekap('mingguan')" class="px-4 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-2xl font-medium">Mingguan</button>
+                        <button onclick="filterRekap('bulanan')" class="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-2xl font-medium">Bulanan</button>
+                        <button onclick="filterRekap('tahunan')" class="px-4 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-2xl font-medium">Tahunan</button>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="text-xs font-medium">Cari tagihan yang belum dibayar per bulan:</label>
+                        <select id="rekap-bulan" onchange="showUnpaidByMonth()" class="mt-1 w-full border rounded-2xl px-3 py-2 text-sm">
+                            <option value="">-- Pilih Bulan --</option>
+                            <option value="1">Januari 2026</option>
+                            <option value="2">Februari 2026</option>
+                            <option value="3">Maret 2026</option>
+                            <option value="4">April 2026</option>
+                            <option value="5">Mei 2026</option>
+                            <option value="6">Juni 2026</option>
+                            <option value="7">Juli 2026</option>
+                            <option value="8">Agustus 2026</option>
+                            <option value="9">September 2026</option>
+                            <option value="10">Oktober 2026</option>
+                            <option value="11">November 2026</option>
+                            <option value="12">Desember 2026</option>
+                        </select>
+                    </div>
+
+                    <div id="rekap-result" class="text-sm"></div>
+                </div>
+            `;
+        }
+
+        function filterRekap(type) {
+            const resultEl = document.getElementById('rekap-result');
+            let html = '';
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth() + 1;
+            const currentYear = currentDate.getFullYear();
+
+            if (type === 'harian') {
+                // Show today's or recent unpaid/paid summary
+                const todayBills = bills.filter(b => b.bulan === currentMonth);
+                const totalPaid = todayBills.filter(b => b.status === 'lunas').reduce((a, b) => a + b.nominal, 0);
+                const totalUnpaid = todayBills.filter(b => b.status === 'belum').reduce((a, b) => a + b.nominal, 0);
+                
+                html = `
+                    <div class="text-sm space-y-2">
+                        <div class="font-semibold">Rekap Harian (Bulan Ini)</div>
+                        <div class="flex justify-between bg-emerald-50 px-3 py-2 rounded-2xl">
+                            <span>Sudah Dibayar</span>
+                            <span class="font-bold text-emerald-600">Rp ${totalPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="flex justify-between bg-red-50 px-3 py-2 rounded-2xl">
+                            <span>Belum Dibayar</span>
+                            <span class="font-bold text-red-600">Rp ${totalUnpaid.toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (type === 'mingguan') {
+                const weekBills = bills.filter(b => b.bulan === currentMonth);
+                const totalPaid = weekBills.filter(b => b.status === 'lunas').reduce((a, b) => a + b.nominal, 0);
+                const totalUnpaid = weekBills.filter(b => b.status === 'belum').reduce((a, b) => a + b.nominal, 0);
+                
+                html = `
+                    <div class="text-sm space-y-2">
+                        <div class="font-semibold">Rekap Mingguan (Bulan Ini)</div>
+                        <div class="flex justify-between bg-emerald-50 px-3 py-2 rounded-2xl">
+                            <span>Total Lunas</span>
+                            <span class="font-bold text-emerald-600">Rp ${totalPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="flex justify-between bg-red-50 px-3 py-2 rounded-2xl">
+                            <span>Total Belum Lunas</span>
+                            <span class="font-bold text-red-600">Rp ${totalUnpaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">* Data berdasarkan bulan berjalan</div>
+                    </div>
+                `;
+            } 
+            else if (type === 'bulanan') {
+                const unpaidThisMonth = bills.filter(b => b.status === 'belum' && b.bulan === currentMonth);
+                const paidThisMonth = bills.filter(b => b.status === 'lunas' && b.bulan === currentMonth);
+                const totalUnpaid = unpaidThisMonth.reduce((a,b)=>a+b.nominal,0);
+                const totalPaid = paidThisMonth.reduce((a,b)=>a+b.nominal,0);
+                
+                html = `
+                    <div class="text-sm space-y-2">
+                        <div class="font-semibold">Rekap Bulanan</div>
+                        <div class="flex justify-between bg-emerald-50 px-3 py-2 rounded-2xl">
+                            <span>Sudah Dibayar</span> 
+                            <span class="font-bold text-emerald-600">Rp ${totalPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="flex justify-between bg-red-50 px-3 py-2 rounded-2xl">
+                            <span>Belum Dibayar</span> 
+                            <span class="font-bold text-red-600">Rp ${totalUnpaid.toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (type === 'tahunan') {
+                const yearBills = bills.filter(b => b.tahun === currentYear);
+                const totalPaid = yearBills.filter(b => b.status === 'lunas').reduce((a, b) => a + b.nominal, 0);
+                const totalUnpaid = yearBills.filter(b => b.status === 'belum').reduce((a, b) => a + b.nominal, 0);
+                
+                html = `
+                    <div class="text-sm space-y-2">
+                        <div class="font-semibold">Rekap Tahunan ${currentYear}</div>
+                        <div class="flex justify-between bg-emerald-50 px-3 py-2 rounded-2xl">
+                            <span>Total Sudah Dibayar</span>
+                            <span class="font-bold text-emerald-600">Rp ${totalPaid.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="flex justify-between bg-red-50 px-3 py-2 rounded-2xl">
+                            <span>Total Belum Dibayar</span>
+                            <span class="font-bold text-red-600">Rp ${totalUnpaid.toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultEl.innerHTML = html;
+        }
+
+        function showUnpaidByMonth() {
+            const month = parseInt(document.getElementById('rekap-bulan').value);
+            const resultEl = document.getElementById('rekap-result');
+            
+            if (!month) {
+                resultEl.innerHTML = '';
+                return;
+            }
+
+            const unpaid = bills.filter(b => b.bulan === month && b.status === 'belum');
+            
+            if (unpaid.length === 0) {
+                resultEl.innerHTML = `<div class="text-emerald-600 text-sm">Semua siswa sudah membayar bulan ini!</div>`;
+                return;
+            }
+
+            let html = `<div class="text-xs font-medium mb-2">Siswa yang belum membayar:</div><div class="space-y-1">`;
+            unpaid.forEach(b => {
+                const student = students.find(s => s.id === b.studentId);
+                html += `<div class="flex justify-between text-xs bg-red-50 px-3 py-1.5 rounded-2xl"><span>${student ? student.nama : 'Unknown'}</span> <span class="font-semibold">Rp ${b.nominal.toLocaleString('id-ID')}</span></div>`;
+            });
+            html += `</div>`;
+            resultEl.innerHTML = html;
+        }
+
+        function renderEksporRekap(container) {
+            container.innerHTML = `
+                <div class="bg-white rounded-3xl border p-5">
+                    <h3 class="font-semibold mb-4">Ekspor Rekap ke Excel</h3>
+                    
+                    <div class="space-y-4 text-sm">
+                        <div>
+                            <label class="text-xs font-medium">Filter Status</label>
+                            <select id="export-filter" class="w-full border rounded-2xl px-3 py-2 mt-1">
+                                <option value="semua">Semua Data</option>
+                                <option value="lunas">Hanya yang Sudah Membayar</option>
+                                <option value="belum">Hanya yang Belum Membayar</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-medium">Pilih Bulan</label>
+                            <select id="export-bulan" class="w-full border rounded-2xl px-3 py-2 mt-1">
+                                <option value="1">Januari 2026</option>
+                                <option value="2">Februari 2026</option>
+                                <option value="3">Maret 2026</option>
+                                <option value="4">April 2026</option>
+                                <option value="5">Mei 2026</option>
+                                <option value="6">Juni 2026</option>
+                                <option value="7">Juli 2026</option>
+                                <option value="8">Agustus 2026</option>
+                                <option value="9">September 2026</option>
+                                <option value="10">Oktober 2026</option>
+                                <option value="11">November 2026</option>
+                                <option value="12">Desember 2026</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="exportToExcel()" 
+                                class="w-full flex items-center justify-center gap-x-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-3xl font-semibold text-sm">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Ekspor ke Excel</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function exportToExcel() {
+            const filter = document.getElementById('export-filter').value;
+            const month = parseInt(document.getElementById('export-bulan').value);
+
+            let filteredBills = bills.filter(b => b.bulan === month);
+            
+            if (filter === 'lunas') filteredBills = filteredBills.filter(b => b.status === 'lunas');
+            if (filter === 'belum') filteredBills = filteredBills.filter(b => b.status === 'belum');
+
+            const data = filteredBills.map(bill => {
+                const student = students.find(s => s.id === bill.studentId);
+                return {
+                    "Nama Siswa": student ? student.nama : "-",
+                    "Kelas": student ? student.kelas : "-",
+                    "Keterangan Tagihan": bill.keterangan,
+                    "Nominal": bill.nominal,
+                    "Status": bill.status === 'lunas' ? "LUNAS" : "BELUM LUNAS",
+                    "Waktu Pembayaran": bill.paidAt || "-"
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap Pembayaran");
+            
+            const filename = `Rekap_Pembayaran_Bulan_${month}_2026.xlsx`;
+            XLSX.writeFile(wb, filename);
+            
+            showToast('File Excel berhasil diunduh!', 'success');
+        }
+
+        function renderInputSiswa(container) {
+            let html = `
+                <div class="bg-white rounded-3xl border p-5">
+                    <h3 class="font-semibold mb-4">Input Siswa Baru</h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+                        <div><input id="new-nama" placeholder="Nama Lengkap" class="w-full border px-3 py-2.5 rounded-2xl text-sm"></div>
+                        <div><input id="new-alamat" placeholder="Alamat" class="w-full border px-3 py-2.5 rounded-2xl text-sm"></div>
+                        <div>
+                            <select id="new-gender" class="w-full border px-3 py-2.5 rounded-2xl text-sm">
+                                <option value="Laki-laki">Laki-laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </select>
+                        </div>
+                        <div><input id="new-kelas" placeholder="Kelas (contoh: 7A, 8B, 9C)" class="w-full border px-3 py-2.5 rounded-2xl text-sm"></div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="text-xs font-medium text-slate-600 block mb-1">Foto Siswa (opsional)</label>
+                        <input type="file" id="new-foto" accept="image/*" 
+                               class="w-full border px-3 py-2.5 rounded-2xl text-sm bg-white">
+                        <div class="text-[10px] text-slate-400 mt-1">Upload foto siswa (disimpan di browser)</div>
+                    </div>
+                    
+                    <button onclick="addNewStudent()" class="w-full bg-violet-600 text-white py-3 rounded-3xl font-semibold text-sm flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-plus"></i> <span>Simpan Siswa</span>
+                    </button>
+
+                    <div class="mt-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="font-medium">Daftar Siswa (${students.length})</div>
+                            <div class="text-xs text-slate-400">Centang untuk hapus</div>
+                        </div>
+                        
+                        <div class="max-h-72 overflow-auto space-y-2 pr-1" id="siswa-list">
+            `;
+
+            students.forEach(s => {
+                html += `
+                    <div class="flex items-center gap-x-3 bg-slate-50 px-4 py-3 rounded-2xl">
+                        <input type="checkbox" class="siswa-check w-4 h-4 accent-red-500" value="${s.id}">
+                        <div class="flex-1">
+                            <div class="font-medium">${s.nama}</div>
+                            <div class="text-xs text-slate-500">${s.kelas} • ${s.gender}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>
+                        <button onclick="deleteSelectedStudents()" class="mt-3 w-full text-red-600 text-sm py-2 flex items-center justify-center gap-x-1.5 hover:bg-red-50 rounded-2xl">
+                            <i class="fa-solid fa-trash"></i> <span>Hapus Siswa Terpilih</span>
+                        </button>
+                    </div>
+                </div>`;
+
+            container.innerHTML = html;
+        }
+
+        function addNewStudent() {
+            const nama = document.getElementById('new-nama').value.trim();
+            const alamat = document.getElementById('new-alamat').value.trim();
+            const gender = document.getElementById('new-gender').value;
+            const kelas = document.getElementById('new-kelas').value.trim();
+
+            if (!nama || !kelas) {
+                showToast('Nama dan kelas wajib diisi!', 'error');
+                return;
+            }
+
+            const newId = Math.max(0, ...students.map(s => s.id)) + 1;
+            const fotoFile = document.getElementById('new-foto').files[0];
+
+            const createStudent = (fotoBase64) => {
+                const newStudent = {
+                    id: newId,
+                    nama,
+                    gender,
+                    alamat: alamat || "Alamat belum diisi",
+                    kelas,
+                    foto: fotoBase64 || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 60)}`
+                };
+
+                students.push(newStudent);
+
+                // Auto create bill for current month
+                const currentMonth = new Date().getMonth() + 1;
+                const currentYear = new Date().getFullYear();
+                
+                const newBillId = Math.max(0, ...bills.map(b => b.id)) + 1;
+                bills.push({
+                    id: newBillId,
+                    studentId: newId,
+                    keterangan: `SPP ${new Intl.DateTimeFormat('id-ID', {month: 'long'}).format(new Date())} ${currentYear}`,
+                    nominal: 450000,
+                    bulan: currentMonth,
+                    tahun: currentYear,
+                    status: "belum",
+                    paidAt: null
+                });
+
+                saveData();
+                showToast('Siswa berhasil ditambahkan!', 'success');
+                renderInputSiswa(document.getElementById('admin-content'));
+            };
+
+            if (fotoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    createStudent(e.target.result);
+                };
+                reader.readAsDataURL(fotoFile);
+            } else {
+                createStudent(null);
+            }
+        }
+
+        function deleteSelectedStudents() {
+            const checked = document.querySelectorAll('.siswa-check:checked');
+            if (checked.length === 0) return showToast('Pilih siswa yang ingin dihapus', 'error');
+
+            if (!confirm(`Hapus ${checked.length} siswa beserta tagihannya?`)) return;
+
+            const idsToDelete = Array.from(checked).map(cb => parseInt(cb.value));
+            
+            students = students.filter(s => !idsToDelete.includes(s.id));
+            bills = bills.filter(b => !idsToDelete.includes(b.studentId));
+
+            saveData();
+            showToast('Siswa berhasil dihapus', 'success');
+            renderInputSiswa(document.getElementById('admin-content'));
+        }
+
+        function getUniqueClasses() {
+            const classes = [...new Set(students.map(s => s.kelas))];
+            return classes.sort();
+        }
+
+        function renderInputTagihan(container) {
+            const uniqueClasses = getUniqueClasses();
+            
+            let classOptions = `<option value="semua">Semua Kelas</option>`;
+            uniqueClasses.forEach(kelas => {
+                classOptions += `<option value="${kelas}">Khusus ${kelas}</option>`;
+            });
+
+            container.innerHTML = `
+                <div class="bg-white rounded-3xl border p-5">
+                    <h3 class="font-semibold mb-4">Input Tagihan Baru</h3>
+                    
+                    <div class="space-y-3 text-sm">
+                        <input id="tagihan-keterangan" placeholder="Keterangan tagihan (contoh: SPP Februari)" class="w-full border px-4 py-3 rounded-2xl">
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs">Nominal</label>
+                                <input id="tagihan-nominal" type="number" value="450000" class="w-full border px-4 py-3 rounded-2xl">
+                            </div>
+                            <div>
+                                <label class="text-xs">Bulan</label>
+                                <select id="tagihan-bulan" class="w-full border px-4 py-3 rounded-2xl">
+                                    <option value="1">Januari</option>
+                                    <option value="2">Februari</option>
+                                    <option value="3">Maret</option>
+                                    <option value="4">April</option>
+                                    <option value="5">Mei</option>
+                                    <option value="6">Juni</option>
+                                    <option value="7">Juli</option>
+                                    <option value="8">Agustus</option>
+                                    <option value="9">September</option>
+                                    <option value="10">Oktober</option>
+                                    <option value="11">November</option>
+                                    <option value="12">Desember</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs">Untuk Kelas</label>
+                                <select id="tagihan-kelas" class="w-full border px-4 py-3 rounded-2xl">
+                                    ${classOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs">Gender</label>
+                                <select id="tagihan-gender" class="w-full border px-4 py-3 rounded-2xl">
+                                    <option value="semua">Semua</option>
+                                    <option value="Laki-laki">Laki-laki</option>
+                                    <option value="Perempuan">Perempuan</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="addNewTagihan()" class="mt-5 w-full bg-amber-600 hover:bg-amber-700 text-white py-3.5 rounded-3xl font-semibold flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-plus"></i> <span>Simpan &amp; Terapkan ke Siswa</span>
+                    </button>
+
+                    <div class="mt-6">
+                        <div class="font-medium mb-2 text-sm">Daftar Template Tagihan</div>
+                        <div class="max-h-60 overflow-auto space-y-2" id="tagihan-list"></div>
+                    </div>
+                </div>
+            `;
+
+            renderTagihanList();
+        }
+
+        function renderTagihanList() {
+            const container = document.getElementById('tagihan-list');
+            if (!container) return;
+
+            // For simplicity, show unique keterangan from existing bills
+            const uniqueTags = [...new Set(bills.map(b => b.keterangan))];
+            
+            let html = '';
+            uniqueTags.forEach((ket, i) => {
+                html += `
+                    <div class="flex justify-between items-center bg-slate-50 px-4 py-2.5 rounded-2xl text-sm">
+                        <span>${ket}</span>
+                        <button onclick="deleteTagihanTemplate('${ket}')" class="text-red-500 text-xs px-3 py-1">Hapus</button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<div class="text-xs text-slate-400">Belum ada template tagihan.</div>';
+        }
+
+        function addNewTagihan() {
+            const keterangan = document.getElementById('tagihan-keterangan').value.trim();
+            const nominal = parseInt(document.getElementById('tagihan-nominal').value);
+            const bulan = parseInt(document.getElementById('tagihan-bulan').value);
+            const kelasFilter = document.getElementById('tagihan-kelas').value;
+            const genderFilter = document.getElementById('tagihan-gender').value;
+
+            if (!keterangan || !nominal) {
+                return showToast('Keterangan dan nominal wajib diisi', 'error');
+            }
+
+            const currentYear = new Date().getFullYear();
+            let affectedStudents = students;
+
+            if (kelasFilter !== 'semua') {
+                affectedStudents = affectedStudents.filter(s => s.kelas === kelasFilter);
+            }
+            if (genderFilter !== 'semua') {
+                affectedStudents = affectedStudents.filter(s => s.gender === genderFilter);
+            }
+
+            let created = 0;
+            affectedStudents.forEach(student => {
+                // Avoid duplicate bills
+                const exists = bills.find(b => 
+                    b.studentId === student.id && 
+                    b.keterangan === keterangan && 
+                    b.bulan === bulan && 
+                    b.tahun === currentYear
+                );
+                if (!exists) {
+                    bills.push({
+                        id: Date.now() + created,
+                        studentId: student.id,
+                        keterangan,
+                        nominal,
+                        bulan,
+                        tahun: currentYear,
+                        status: "belum",
+                        paidAt: null
+                    });
+                    created++;
+                }
+            });
+
+            saveData();
+            showToast(`Tagihan berhasil dibuat untuk ${created} siswa!`, 'success');
+            renderInputTagihan(document.getElementById('admin-content'));
+        }
+
+        function deleteTagihanTemplate(keterangan) {
+            if (!confirm(`Hapus semua tagihan dengan keterangan "${keterangan}"?`)) return;
+            
+            bills = bills.filter(b => b.keterangan !== keterangan);
+            saveData();
+            renderInputTagihan(document.getElementById('admin-content'));
+            showToast('Template tagihan dihapus', 'success');
+        }
+
+        function renderPengaturan(container) {
+            container.innerHTML = `
+                <div class="bg-white rounded-3xl border p-5 space-y-6 text-sm">
+                    
+                    <!-- Pengaturan Aplikasi (Nama + Warna) -->
+                    <div>
+                        <h4 class="font-semibold mb-3 flex items-center gap-x-2">
+                            <i class="fa-solid fa-palette text-blue-600"></i> 
+                            <span>Pengaturan Aplikasi</span>
+                        </h4>
+                        <div class="space-y-4 bg-slate-50 p-4 rounded-2xl">
+                            <div>
+                                <label class="text-xs font-medium text-slate-600">Nama Aplikasi</label>
+                                <input id="setting-appname" value="${appSettings.appName}" 
+                                       class="w-full border px-4 py-2.5 rounded-2xl text-sm mt-1">
+                            </div>
+                            
+                            <div>
+                                <label class="text-xs font-medium text-slate-600 block mb-2">Warna Utama</label>
+                                <div class="flex gap-2 flex-wrap">
+                                    <button onclick="changeThemeColor('#2563eb')" class="w-9 h-9 rounded-2xl bg-[#2563eb] border-2 border-white shadow ring-1 ring-offset-2 ring-blue-300"></button>
+                                    <button onclick="changeThemeColor('#059669')" class="w-9 h-9 rounded-2xl bg-[#059669] border-2 border-white shadow"></button>
+                                    <button onclick="changeThemeColor('#7c3aed')" class="w-9 h-9 rounded-2xl bg-[#7c3aed] border-2 border-white shadow"></button>
+                                    <button onclick="changeThemeColor('#ea580c')" class="w-9 h-9 rounded-2xl bg-[#ea580c] border-2 border-white shadow"></button>
+                                    <button onclick="changeThemeColor('#be123c')" class="w-9 h-9 rounded-2xl bg-[#be123c] border-2 border-white shadow"></button>
+                                </div>
+                                <div class="text-[10px] text-slate-400 mt-1">Pilih warna tema aplikasi</div>
+                            </div>
+                            
+                            <button onclick="saveAppSettings()" 
+                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-x-2">
+                                <i class="fa-solid fa-save"></i>
+                                <span>Simpan Pengaturan Aplikasi</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pengaturan Halaman Beranda -->
+                    <div>
+                        <h4 class="font-semibold mb-3">Pengaturan Halaman Beranda</h4>
+                        <div class="space-y-4" id="home-settings">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button onclick="saveHomeSettings()" class="mt-3 w-full bg-slate-800 text-white py-2.5 rounded-2xl text-sm font-medium">Simpan Pengaturan Beranda</button>
+                    </div>
+
+                    <div>
+                        <h4 class="font-semibold mb-2">Pengaturan QRIS API Key</h4>
+                        <div class="flex gap-2">
+                            <input id="qris-input" value="${qrisApiKey}" class="flex-1 border px-3 py-2 rounded-2xl text-xs">
+                            <button onclick="saveQRISKey()" class="px-5 bg-blue-600 text-white rounded-2xl text-xs font-medium">Simpan</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-semibold mb-2">Pemberitahuan di Halaman Pembayaran</h4>
+                        <textarea id="notif-text" class="w-full border px-3 py-2 rounded-2xl text-sm h-20">${document.getElementById('payment-notification').textContent}</textarea>
+                        <button onclick="saveNotification()" class="mt-2 w-full bg-blue-600 text-white py-2 rounded-2xl text-sm">Simpan Pemberitahuan</button>
+                    </div>
+
+                    <!-- Pengaturan Halaman Tentang -->
+                    <div class="pt-4 border-t">
+                        <h4 class="font-semibold mb-3">Pengaturan Halaman Tentang</h4>
+                        <div class="space-y-3 bg-slate-50 p-4 rounded-2xl">
+                            <div>
+                                <label class="text-xs font-medium">Judul Halaman</label>
+                                <input id="about-title" value="${aboutSettings.title}" class="w-full border px-3 py-2 rounded-2xl text-sm mt-1">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium">Deskripsi</label>
+                                <textarea id="about-desc" class="w-full border px-3 py-2 rounded-2xl text-sm h-16 mt-1">${aboutSettings.description}</textarea>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-xs font-medium">Angka Siswa</label>
+                                    <input id="about-siswa" value="${aboutSettings.stats.siswa}" class="w-full border px-3 py-2 rounded-2xl text-sm mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">Angka Pelunasan</label>
+                                    <input id="about-pelunasan" value="${aboutSettings.stats.pelunasan}" class="w-full border px-3 py-2 rounded-2xl text-sm mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">Angka Akses</label>
+                                    <input id="about-akses" value="${aboutSettings.stats.akses}" class="w-full border px-3 py-2 rounded-2xl text-sm mt-1">
+                                </div>
+                            </div>
+                            <button onclick="saveAboutSettings()" class="w-full bg-emerald-600 text-white py-2.5 rounded-2xl text-sm font-medium">Simpan Pengaturan Tentang</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Render home sections editor (with background image URL)
+            const homeContainer = document.getElementById('home-settings');
+            homeContainer.innerHTML = '';
+            
+            homeSections.forEach((section, index) => {
+                const div = document.createElement('div');
+                div.className = 'border p-3 rounded-2xl space-y-2';
+                div.innerHTML = `
+                    <div class="font-medium mb-1 text-xs">Section ${index + 1}</div>
+                    <input value="${section.title}" placeholder="Judul" class="home-title w-full border px-3 py-1.5 rounded-xl text-sm" data-index="${index}">
+                    <textarea placeholder="Deskripsi" class="home-desc w-full border px-3 py-1.5 rounded-xl text-xs h-12" data-index="${index}">${section.description}</textarea>
+                    <input value="${section.bgImage}" placeholder="URL Gambar Background" class="home-bg w-full border px-3 py-1.5 rounded-xl text-xs" data-index="${index}">
+                `;
+                homeContainer.appendChild(div);
+            });
+        }
+
+        function changeThemeColor(color) {
+            appSettings.primaryColor = color;
+            applyAppSettings();
+            showToast('Warna tema diubah (simpan untuk permanen)', 'info');
+        }
+
+        function saveAppSettings() {
+            const nameInput = document.getElementById('setting-appname');
+            if (nameInput) {
+                appSettings.appName = nameInput.value.trim() || "SekolahPay";
+            }
+            saveData();
+            applyAppSettings();
+            showToast('Pengaturan aplikasi berhasil disimpan!', 'success');
+        }
+
+        function saveHomeSettings() {
+            const titles = document.querySelectorAll('.home-title');
+            const descs = document.querySelectorAll('.home-desc');
+            const bgs = document.querySelectorAll('.home-bg');
+
+            titles.forEach((el, i) => {
+                homeSections[i].title = el.value;
+                homeSections[i].description = descs[i].value;
+                if (bgs[i]) homeSections[i].bgImage = bgs[i].value;
+            });
+
+            saveData();
+            showToast('Pengaturan beranda berhasil disimpan!', 'success');
+            renderBeranda();
+        }
+
+        function saveQRISKey() {
+            const input = document.getElementById('qris-input').value.trim();
+            if (!input) return;
+            qrisApiKey = input;
+            saveData();
+            showToast('API Key QRIS berhasil diperbarui', 'success');
+        }
+
+        function saveNotification() {
+            const text = document.getElementById('notif-text').value;
+            document.getElementById('payment-notification').textContent = text;
+            showToast('Pemberitahuan berhasil disimpan', 'success');
+        }
+
+        function saveAboutSettings() {
+            const title = document.getElementById('about-title').value.trim();
+            const desc = document.getElementById('about-desc').value.trim();
+            const siswa = document.getElementById('about-siswa').value.trim();
+            const pelunasan = document.getElementById('about-pelunasan').value.trim();
+            const akses = document.getElementById('about-akses').value.trim();
+
+            if (title) aboutSettings.title = title;
+            if (desc) aboutSettings.description = desc;
+            if (siswa) aboutSettings.stats.siswa = siswa;
+            if (pelunasan) aboutSettings.stats.pelunasan = pelunasan;
+            if (akses) aboutSettings.stats.akses = akses;
+
+            saveData();
+            renderTentangPage();
+            showToast('Pengaturan halaman Tentang berhasil disimpan!', 'success');
+        }
+
+        function renderDaftarAkun(container) {
+            let html = `
+                <div class="bg-white rounded-3xl border p-5">
+                    <h3 class="font-semibold mb-4">Daftar Akun Admin</h3>
+                    
+                    <div class="space-y-2 mb-5">
+            `;
+
+            accounts.forEach((acc, index) => {
+                html += `
+                    <div class="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-2xl">
+                        <div>
+                            <div class="font-medium">${acc.username}</div>
+                            <div class="text-xs text-slate-400">${acc.role}</div>
+                        </div>
+                        ${acc.username !== 'superadmin' ? `
+                            <button onclick="deleteAccount(${index})" class="text-red-500 px-3 text-xs">Hapus</button>
+                        ` : `<span class="text-xs px-3 py-1 bg-emerald-100 text-emerald-600 rounded-2xl">Super Admin</span>`}
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+
+            if (currentUser && currentUser.role === 'superadmin') {
+                html += `
+                    <div class="border-t pt-5">
+                        <h4 class="font-medium mb-3 text-sm">Buat Akun Baru</h4>
+                        <div class="space-y-3">
+                            <input id="new-username" placeholder="Username baru" class="w-full border px-4 py-3 rounded-2xl text-sm">
+                            <input id="new-password" placeholder="Password" type="password" class="w-full border px-4 py-3 rounded-2xl text-sm">
+                            <button onclick="createNewAccount()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-3.5 rounded-3xl text-sm font-semibold flex items-center justify-center gap-x-2">
+                                <i class="fa-solid fa-user-plus"></i>
+                                <span>Buat Akun</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function deleteAccount(index) {
+            if (accounts[index].username === 'superadmin') return;
+            if (!confirm('Hapus akun ini?')) return;
+            
+            accounts.splice(index, 1);
+            saveData();
+            renderDaftarAkun(document.getElementById('admin-content'));
+        }
+
+        function createNewAccount() {
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value.trim();
+
+            if (!username || !password) return showToast('Username & password wajib diisi', 'error');
+            if (accounts.find(a => a.username === username)) return showToast('Username sudah digunakan', 'error');
+
+            accounts.push({ username, password, role: 'admin' });
+            saveData();
+            showToast('Akun baru berhasil dibuat!', 'success');
+            renderDaftarAkun(document.getElementById('admin-content'));
+        }
+
+        // ==================== UTILITIES ====================
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 max-w-[320px] w-full mx-auto px-5 py-3.5 rounded-3xl shadow-xl flex items-center gap-x-3 text-sm z-[200] ${
+                type === 'success' ? 'bg-emerald-600 text-white' : 
+                type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'
+            }`;
+            
+            toast.innerHTML = `
+                <div class="flex-1">${message}</div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 200);
+            }, 2600);
+        }
+
+        // ==================== INIT ====================
+        function initializeApp() {
+            initTailwind();
+            initData();
+            
+            // Render initial beranda
+            renderBeranda();
+            
+            // Show beranda by default
+            document.getElementById('page-beranda').classList.remove('hidden');
+            document.getElementById('nav-beranda').classList.add('active', 'text-blue-600');
+            
+            // Keyboard support for search
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('focus', () => {
+                    showPage('pembayaran');
+                });
+            }
+
+            // Make sure admin nav is hidden initially
+            document.getElementById('nav-admin').classList.add('hidden');
+
+            console.log('%c[SekolahPay] Web app initialized successfully', 'color:#64748b');
+        }
+
+        // Boot the app
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
